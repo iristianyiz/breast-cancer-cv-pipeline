@@ -6,7 +6,7 @@ Benchmarks: LogisticRegression, RandomForest, XGBoost.
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import cv2
 import joblib
@@ -122,8 +122,8 @@ def evaluate_stratified_cv(
     y: np.ndarray,
     paths: List[str],
     k: int = 5,
-) -> Dict[str, Dict[str, float]]:
-    """Run stratified k-fold CV for each model; print per-fold accuracy, confusion matrix, report, and comparison."""
+) -> Dict[str, Dict[str, Any]]:
+    """Run stratified k-fold CV for each model; print per-fold accuracy, confusion matrix, report, hard cases, and comparison."""
     skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
     models = get_models()
     results: Dict[str, Dict[str, float]] = {}
@@ -158,10 +158,19 @@ def evaluate_stratified_cv(
         print(f"\nConfusion matrix:\n{confusion_matrix(all_true, all_pred)}")
         print(f"\nClassification report:\n{classification_report(all_true, all_pred, digits=4)}")
 
+        # Misclassified sample paths — for error analysis / understanding hard cases
+        n_mis = len(hard_cases)
+        print(f"\nMisclassified samples ({n_mis}):")
+        for p in hard_cases:
+            print(f"  {p}")
+        if n_mis == 0:
+            print("  (none)")
+
         results[model_name] = {
             "cv_mean_acc": float(np.mean(accs)),
             "cv_std_acc": float(np.std(accs)),
-            "num_misclassified": float(sum(t != p for t, p in zip(all_true, all_pred))),
+            "num_misclassified": float(n_mis),
+            "hard_cases": hard_cases,
         }
 
     # -------------------------
